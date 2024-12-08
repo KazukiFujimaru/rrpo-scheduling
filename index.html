@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduling Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 100%; /* Prevent content from exceeding device width */
+            overflow-x: hidden; /* Disable horizontal scrolling */
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%; /* Make the table responsive */
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            word-wrap: break-word; /* Handle overflow for long text */
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .gantt {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+            overflow-x: auto; /* Enable horizontal scrolling for the Gantt chart */
+            width: 100%; /* Restrict Gantt chart width */
+        }
+
+        .gantt-bar {
+            display: inline-block;
+            text-align: center;
+            margin-right: 2px;
+            color: white;
+            border-radius: 3px;
+            padding: 5px;
+            min-width: 50px; /* Adjust minimum width for better responsiveness */
+            max-width: 100%; /* Ensure the bar doesn't exceed container width */
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scheduling Simulator</h1>
+    <form id="process-form">
+        <label>Arrival Time: <input type="number" name="arrivalTime" required></label><br>
+        <label>Burst Time: <input type="number" name="burstTime" required></label><br>
+        <label>Priority (optional): <input type="number" name="priority"></label><br>
+        <button type="button" onclick="addProcess()">Add Process</button>
+    </form>
+    <div id="process-list">
+        <h2>Added Processes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Process ID</th>
+                    <th>Arrival Time</th>
+                    <th>Burst Time</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody id="process-table-body"></tbody>
+        </table>
+    </div>
+    <button id="round-robin-btn" onclick="showQuantumInput()">Run Round Robin</button>
+    <div id="quantum-input-section" class="hidden">
+        <label>Quantum Time: <input type="number" id="quantum-time" min="1" required></label>
+        <button onclick="runRoundRobin()">Submit Quantum</button>
+    </div>
+    <button onclick="simulate('priority')">Run Priority</button>
+    <button onclick="resetSimulator()">Reset</button>
+    <div id="results"></div>
+    <div id="gantt-chart" class="gantt"></div>
+    <script>
+        let processes = [];
+        let processCounter = 1;
+        const processColors = {}; // Store consistent colors for processes
+        const highContrastColors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c'];
+
+        function addProcess() {
+            const form = document.getElementById('process-form');
+            const arrivalTime = parseInt(form.arrivalTime.value);
+            const burstTime = parseInt(form.burstTime.value);
+            const priority = form.priority.value ? parseInt(form.priority.value) : null;
+
+            const process = { 
+                processId: processCounter++, 
+                arrivalTime, 
+                burstTime, 
+                priority, 
+                remainingTime: burstTime 
+            };
+            processes.push(process);
+
+            form.reset();
+            updateProcessTable();
+        }
+
+        function updateProcessTable() {
+            const tableBody = document.getElementById('process-table-body');
+            tableBody.innerHTML = '';
+
+            processes.forEach(process => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${process.processId}</td>
+                    <td>${process.arrivalTime}</td>
+                    <td>${process.burstTime}</td>
+                    <td>${process.priority !== null ? process.priority : '-'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function showQuantumInput() {
+            const inputSection = document.getElementById('quantum-input-section');
+            inputSection.classList.remove('hidden');
+        }
+
+        function runRoundRobin() {
+            const quantum = parseInt(document.getElementById('quantum-time').value);
+            if (!isNaN(quantum) && quantum > 0) {
+                document.getElementById('quantum-input-section').classList.add('hidden');
+                simulateRoundRobin(quantum);
+            } else {
+                alert("Invalid Quantum Time. Please enter a positive number.");
+            }
+        }
+
+        function simulateRoundRobin(quantum) {
+            let timeline = [];
+            let time = 0;
+
+            while (processes.some(p => p.remainingTime > 0)) {
+                processes.forEach(process => {
+                    if (process.remainingTime > 0) {
+                        let executionTime = Math.min(quantum, process.remainingTime);
+                        timeline.push({ processId: process.processId, start: time, end: time + executionTime });
+                        process.remainingTime -= executionTime;
+                        time += executionTime;
+                    }
+                });
+            }
+
+            calculateMetrics(timeline);
+        }
+
+        function calculateMetrics(timeline) {
+            const resultTable = document.createElement('table');
+            resultTable.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Process</th>
+                        <th>AT</th>
+                        <th>BT</th>
+                        <th>CT</th>
+                        <th>WT</th>
+                        <th>TAT</th>
+                    </tr>
+                </thead>
+                <tbody id="metrics-body"></tbody>
+            `;
+            const metricsBody = resultTable.querySelector('#metrics-body');
+            let totalWT = 0, totalTAT = 0;
+
+            processes.forEach(process => {
+                const completionTime = timeline.findLast(event => event.processId === process.processId).end;
+                const turnAroundTime = completionTime - process.arrivalTime;
+                const waitingTime = turnAroundTime - process.burstTime;
+
+                totalWT += waitingTime;
+                totalTAT += turnAroundTime;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>P${process.processId}</td>
+                    <td>${process.arrivalTime}</td>
+                    <td>${process.burstTime}</td>
+                    <td>${completionTime}</td>
+                    <td>${waitingTime}</td>
+                    <td>${turnAroundTime}</td>
+                `;
+                metricsBody.appendChild(row);
+            });
+
+            const averagesRow = document.createElement('div');
+            averagesRow.innerHTML = `
+                <h3>Average Waiting Time: ${(totalWT / processes.length).toFixed(2)}</h3>
+                <h3>Average Turn Around Time: ${(totalTAT / processes.length).toFixed(2)}</h3>
+            `;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.appendChild(resultTable);
+            resultsDiv.appendChild(averagesRow);
+
+            renderGanttChart(timeline);
+        }
+
+        function renderGanttChart(timeline) {
+            const ganttChart = document.getElementById('gantt-chart');
+            ganttChart.innerHTML = ''; // Clear previous chart
+
+            timeline.forEach(event => {
+                const bar = document.createElement('div');
+                if (!processColors[event.processId]) {
+                    processColors[event.processId] = highContrastColors[Object.keys(processColors).length % highContrastColors.length];
+                }
+                bar.className = 'gantt-bar';
+                bar.style.backgroundColor = processColors[event.processId];
+                bar.style.width = `${(event.end - event.start) * 10}px`; // Scale width for visualization
+                bar.innerHTML = `P${event.processId} (${event.start}-${event.end})`;
+                ganttChart.appendChild(bar);
+            });
+        }
+
+        function resetSimulator() {
+            processes = [];
+            processCounter = 1;
+            document.getElementById('process-form').reset();
+            document.getElementById('process-table-body').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('gantt-chart').innerHTML = '';
+            document.getElementById('quantum-input-section').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
