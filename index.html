@@ -109,7 +109,7 @@
     </div>
     <button id="round-robin-btn" onclick="showQuantumInput()">Jalankan Round Robin</button>
     <div id="quantum-input-section" class="hidden">
-        <label>Quantum Time : <input type="number" id="quantum-time" min="1" required></label>
+        <label>Waktu Kuantum : <input type="number" id="quantum-time" min="1" required></label>
         <button onclick="runRoundRobin()">Jalankan</button>
     </div>
     <button onclick="simulate('priority')">Jalankan Priority Order</button>
@@ -121,7 +121,7 @@
     <h3>Catatan : </h3>
     <p>- Untuk memulai pengujian baru, Tekan tombol reset setelah melakukan pengujian atau refresh halaman</p>
     <p>- Nilai Prioritas tidak digunakan pada perhitungan Round Robin</p>
-    <p>- Quantum Time adalah satuan waktu per proses Round Robin</p>
+    <p>- Waktu Kuantum adalah satuan waktu per proses Round Robin</p>
     <p>- Round Robin tidak secara langsung menginterupsi. Jika proses baru datang ketika proses lama sedang berjalan, proses baru harus menunggu terlebih dahulu</p>
     <p>- Jika Round Robin memiliki model Non Preemptive (tidak bisa diganggu/tidak bisa mengubah urutan) maka tidak ada bedanya dengan FCFS</p>
     <p>- Pada Round Robin, apabila ada proses baru ketika proses sebelumnya sudah mengantri, maka proses baru harus ikut mengantri dan tidak didahulukan</p>
@@ -207,7 +207,7 @@
                 document.getElementById('quantum-input-section').classList.add('hidden');
                 simulateRoundRobin(quantum);
             } else {
-                alert("Quantum Time invalid. Tolong masukan angka positif.");
+                alert("Waktu Kuantum invalid. Tolong masukan angka positif.");
             }
         }
 
