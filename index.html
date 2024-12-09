@@ -29,7 +29,21 @@
         button:hover {
             background-color: #0056b3;
         }
+        
+        .reset-button {
+            background-color: #dc3545; /* Red color */
+            color: white;
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
 
+        .reset-button:hover {
+            background-color: #c82333; /* Darker red for hover */
+        }
+        
         table {
             width: 100%; /* Make the table responsive */
             border-collapse: collapse;
@@ -62,7 +76,7 @@
             color: white;
             border-radius: 3px;
             padding: 5px;
-            min-width: 50px; /* Adjust minimum width for better responsiveness */
+            min-width: 100px; /* Adjust minimum width for better responsiveness */
             max-width: 100%; /* Ensure the bar doesn't exceed container width */
         }
 
@@ -99,7 +113,7 @@
         <button onclick="runRoundRobin()">Jalankan</button>
     </div>
     <button onclick="simulate('priority')">Jalankan Priority Order</button>
-    <button onclick="resetSimulator()">Reset</button>
+    <button class="reset-button" onclick="resetSimulator()">Reset</button>
     <div id="results"></div>
     <div id="gantt-chart" class="gantt"></div>
     <br>
