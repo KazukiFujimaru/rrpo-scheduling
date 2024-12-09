@@ -88,9 +88,9 @@
 <body>
     <h1>Simulasi Penjadwalan</h1>
     <form id="process-form">
-        <label>Arrival Time : <input type="number" name="arrivalTime" required></label><br>
-        <label>Burst Time : <input type="number" name="burstTime" required></label><br>
-        <label>Nilai Prioritas (isi untuk Priority Order) : <input type="number" name="priority"></label><br>
+        <label>Arrival Time : <input type="number" name="arrivalTime" min="0" required></label><br>
+        <label>Burst Time : <input type="number" name="burstTime" min="0" required></label><br>
+        <label>Nilai Prioritas (isi untuk Priority Order) : <input type="number" name="priority" min="0"></label><br>
         <button type="button" onclick="addProcess()">Tambah Proses</button>
     </form>
     <div id="process-list">
@@ -147,6 +147,19 @@
             const burstTime = parseInt(form.burstTime.value);
             const priority = form.priority.value ? parseInt(form.priority.value) : null;
 
+            if (arrivalTime === null || arrivalTime === undefined || arrivalTime === "" || isNaN(parseInt(arrivalTime)) || parseInt(arrivalTime) < 0) {
+                alert("Tolong masukan Arrival Time yang benar (0 atau lebih besar dari 0).");
+                return; // Prevent further execution
+            }
+            if (burstTime === null || burstTime === undefined || burstTime === "" || isNaN(parseInt(burstTime)) || parseInt(burstTime) < 0) {
+                alert("Tolong masukan Burst Time yang benar (0 atau lebih besar dari 0).");
+                return; // Prevent further execution
+            }
+            if (parseInt(priority) < 0) {
+                alert("Tolong masukan Nilai Prioritas yang benar (0 atau lebih besar dari 0).");
+                return; // Prevent further execution
+            }
+
             const process = { 
                 processId: processCounter++, 
                 arrivalTime, 
@@ -187,7 +200,7 @@
                 document.getElementById('quantum-input-section').classList.add('hidden');
                 simulateRoundRobin(quantum);
             } else {
-                alert("Invalid Quantum Time. Please enter a positive number.");
+                alert("Quantum Time invalid. Tolong masukan angka positif.");
             }
         }
 
