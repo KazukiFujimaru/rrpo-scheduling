@@ -200,10 +200,10 @@
                 alert("Tekan tombol reset sebelum mensimulasikan algoritma penjadwalan lagi.");
                 return; // Prevent further execution
             }
-            algorithmSelected = true; // Set the flag to true after selection
-
+            
             const quantum = parseInt(document.getElementById('quantum-time').value);
             if (!isNaN(quantum) && quantum > 0) {
+                algorithmSelected = true; // Set the flag to true after selection
                 document.getElementById('quantum-input-section').classList.add('hidden');
                 simulateRoundRobin(quantum);
             } else {
