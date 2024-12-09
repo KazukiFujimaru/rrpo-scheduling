@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scheduling Simulator</title>
+    <title>Simukasi Round Robin dan Priority Order</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,36 +72,55 @@
     </style>
 </head>
 <body>
-    <h1>Scheduling Simulator</h1>
+    <h1>Simulasi Penjadwalan</h1>
     <form id="process-form">
-        <label>Arrival Time: <input type="number" name="arrivalTime" required></label><br>
-        <label>Burst Time: <input type="number" name="burstTime" required></label><br>
-        <label>Priority (optional): <input type="number" name="priority"></label><br>
-        <button type="button" onclick="addProcess()">Add Process</button>
+        <label>Arrival Time : <input type="number" name="arrivalTime" required></label><br>
+        <label>Burst Time : <input type="number" name="burstTime" required></label><br>
+        <label>Nilai Prioritas (isi untuk Priority Order) : <input type="number" name="priority"></label><br>
+        <button type="button" onclick="addProcess()">Tambah Proses</button>
     </form>
     <div id="process-list">
-        <h2>Added Processes</h2>
+        <h2>Proses yang sudah ditambahkan</h2>
         <table>
             <thead>
                 <tr>
                     <th>Process ID</th>
                     <th>Arrival Time</th>
                     <th>Burst Time</th>
-                    <th>Priority</th>
+                    <th>Nilai Prioritas</th>
                 </tr>
             </thead>
             <tbody id="process-table-body"></tbody>
         </table>
     </div>
-    <button id="round-robin-btn" onclick="showQuantumInput()">Run Round Robin</button>
+    <button id="round-robin-btn" onclick="showQuantumInput()">Jalankan Round Robin</button>
     <div id="quantum-input-section" class="hidden">
-        <label>Quantum Time: <input type="number" id="quantum-time" min="1" required></label>
-        <button onclick="runRoundRobin()">Submit Quantum</button>
+        <label>Quantum Time : <input type="number" id="quantum-time" min="1" required></label>
+        <button onclick="runRoundRobin()">Jalankan</button>
     </div>
-    <button onclick="simulate('priority')">Run Priority</button>
+    <button onclick="simulate('priority')">Jalankan Priority Order</button>
     <button onclick="resetSimulator()">Reset</button>
     <div id="results"></div>
     <div id="gantt-chart" class="gantt"></div>
+    <br>
+    <hr>
+    <h3>Catatan : </h3>
+    <p>- Untuk memulai pengujian baru, Tekan tombol reset setelah melakukan pengujian atau refresh halaman</p>
+    <p>- Nilai Prioritas tidak digunakan pada perhitungan Round Robin</p>
+    <p>- Quantum Time adalah satuan waktu per proses Round Robin</p>
+    <p>- Round Robin tidak secara langsung menginterupsi. Jika proses baru datang ketika proses lama sedang berjalan, proses baru harus menunggu terlebih dahulu</p>
+    <p>- Jika Round Robin memiliki model Non Preemptive (tidak bisa diganggu/tidak bisa mengubah urutan) maka tidak ada bedanya dengan FCFS</p>
+    <p>- Pada Round Robin, apabila ada proses baru ketika proses sebelumnya sudah mengantri, maka proses baru harus ikut mengantri dan tidak didahulukan</p>
+    
+<p>- Semakin kecil nilai prioritas, semakin tinggi kedudukannya</p>
+    <p>- Priority Order pada website ini menggunakan prinsip Preemptive, Proses dapat diganggu ketika berjalan</p>
+    <p>- Jika nilai prioritas sama, maka proses yang datang lebih awal akan dieksekusi terlebih dahulu (Prinsip FCFS)</p>
+    <hr>
+    <h3>Referensi : </h3>
+    <a href="https://binus.ac.id/malang/2021/11/round-robin-scheduling/">Penjadwalan Round Robin</a> - Binus Compsci<br> 
+    <a href="https://www.geeksforgeeks.org/program-for-round-robin-scheduling-for-the-same-arrival-time/">Penjadwalan Round Robin #2</a> - GeeksforGeeks<br>
+    <a href="https://www.codechef.com/practice/course/operating-systems/OSC06/problems/OSP33">Penjadwalan Priority Order</a> - CodeChef<br>
+    <a href="https://www.scaler.com/topics/operating-system/priority-scheduling-algorithm/">Penjafwalan Priority Order #2</a> - Scaler Academy
     <script>
         let processes = [];
         let processCounter = 1;
@@ -162,18 +181,120 @@
             let timeline = [];
             let time = 0;
 
-            while (processes.some(p => p.remainingTime > 0)) {
+            // Maintain a queue for processes ready for execution
+            let readyQueue = [];
+            let completedProcesses = new Set();
+
+            // Continue until all processes are completed
+            while (completedProcesses.size < processes.length) {
+                // Add processes that have arrived to the ready queue
                 processes.forEach(process => {
-                    if (process.remainingTime > 0) {
-                        let executionTime = Math.min(quantum, process.remainingTime);
-                        timeline.push({ processId: process.processId, start: time, end: time + executionTime });
-                        process.remainingTime -= executionTime;
-                        time += executionTime;
+                    if (
+                        process.arrivalTime <= time &&
+                        process.remainingTime > 0 &&
+                        !readyQueue.includes(process) &&
+                        !completedProcesses.has(process.processId)
+                    ) {
+                        readyQueue.push(process);
                     }
                 });
+
+                if (readyQueue.length > 0) {
+                    // Process the next process in the ready queue
+                    const currentProcess = readyQueue.shift();
+
+                    const executionTime = Math.min(quantum, currentProcess.remainingTime);
+                    timeline.push({ processId: currentProcess.processId, start: time, end: time + executionTime });
+                    currentProcess.remainingTime -= executionTime;
+                    time += executionTime;
+
+                    // If the process has remaining time, re-add it to the queue
+                    if (currentProcess.remainingTime > 0) {
+                        // Check if any new processes arrived during this execution time
+                        processes.forEach(process => {
+                            if (
+                                process.arrivalTime > time - executionTime &&
+                                process.arrivalTime <= time &&
+                                process.remainingTime > 0 &&
+                                !readyQueue.includes(process) &&
+                                !completedProcesses.has(process.processId)
+                            ) {
+                                readyQueue.push(process);
+                            }
+                        });
+
+                        readyQueue.push(currentProcess);
+                    } else {
+                        // Mark the process as completed
+                        completedProcesses.add(currentProcess.processId);
+                    }
+                } else {
+                    // If no processes are ready, increment time to the next arrival
+                    time++;
+                }
             }
 
             calculateMetrics(timeline);
+            return timeline; // Return the timeline for debugging
+        }
+
+
+        function simulate(type) {
+            if (type === 'priority') {
+                // Clone the processes array to add a new property for tracking remaining burst time
+                processes.forEach(process => {
+                    process.remainingBurstTime = process.burstTime; // Track remaining burst time separately
+                });
+
+                let timeline = [];
+                let currentTime = 0;
+
+                while (processes.some(p => p.remainingBurstTime > 0)) {
+                    let availableProcesses = processes.filter(p => p.arrivalTime <= currentTime && p.remainingBurstTime > 0);
+
+                    if (availableProcesses.length > 0) {
+                        let currentProcess = availableProcesses.reduce((highest, process) => {
+                            if (
+                                process.priority < highest.priority ||
+                                (process.priority === highest.priority && process.arrivalTime < highest.arrivalTime)
+                            ) {
+                                return process;
+                            }
+                            return highest;
+                        });
+
+                        // Merge consecutive executions of the same process
+                        if (
+                            timeline.length > 0 &&
+                            timeline[timeline.length - 1].processId === currentProcess.processId
+                        ) {
+                            timeline[timeline.length - 1].end++;
+                        } else {
+                            timeline.push({
+                                processId: currentProcess.processId,
+                                start: currentTime,
+                                end: currentTime + 1,
+                            });
+                        }
+
+                        currentProcess.remainingBurstTime -= 1;
+                        currentTime++;
+                    } else {
+                        // Merge consecutive idle periods
+                        if (
+                            timeline.length > 0 &&
+                            timeline[timeline.length - 1].processId === 'IDLE'
+                        ) {
+                            timeline[timeline.length - 1].end++;
+                        } else {
+                            timeline.push({ processId: 'IDLE', start: currentTime, end: currentTime + 1 });
+                        }
+                        currentTime++;
+                    }
+                }
+
+                calculateMetrics(timeline);
+            }
         }
 
         function calculateMetrics(timeline) {
@@ -216,8 +337,8 @@
 
             const averagesRow = document.createElement('div');
             averagesRow.innerHTML = `
-                <h3>Average Waiting Time: ${(totalWT / processes.length).toFixed(2)}</h3>
-                <h3>Average Turn Around Time: ${(totalTAT / processes.length).toFixed(2)}</h3>
+                <h3>Rata-rata Waiting Time : ${(totalWT / processes.length).toFixed(2)}</h3>
+                <h3>Rata-rata Turn Around Time : ${(totalTAT / processes.length).toFixed(2)}</h3>
             `;
             const resultsDiv = document.getElementById('results');
             resultsDiv.appendChild(resultTable);
