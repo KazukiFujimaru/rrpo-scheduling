@@ -263,7 +263,12 @@
                         completedProcesses.add(currentProcess.processId);
                     }
                 } else {
-                    // If no processes are ready, increment time to the next arrival
+                    // If no processes are ready, increment time to the next arrival or show idle
+                    if (timeline.length > 0 && timeline[timeline.length - 1].processId === '-IDLE') {
+                        timeline[timeline.length - 1].end++;
+                    } else {
+                        timeline.push({ processId: '-IDLE', start: time, end: time + 1 });
+                    }
                     time++;
                 }
             }
@@ -323,11 +328,11 @@
                         // Merge consecutive idle periods
                         if (
                             timeline.length > 0 &&
-                            timeline[timeline.length - 1].processId === 'IDLE'
+                            timeline[timeline.length - 1].processId === '-IDLE'
                         ) {
                             timeline[timeline.length - 1].end++;
                         } else {
-                            timeline.push({ processId: 'IDLE', start: currentTime, end: currentTime + 1 });
+                            timeline.push({ processId: '-IDLE', start: currentTime, end: currentTime + 1 });
                         }
                         currentTime++;
                     }
