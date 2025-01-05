@@ -110,9 +110,10 @@
     <button id="round-robin-btn" onclick="showQuantumInput()">Jalankan Round Robin</button>
     <div id="quantum-input-section" class="hidden">
         <label>Waktu Kuantum : <input type="number" id="quantum-time" min="1" required></label>
-        <button onclick="runRoundRobin()">Jalankan</button>
+        <button onclick="runRoundRobin()">Set Waktu Kuantum</button>
     </div>
-    <button onclick="simulate('priority')">Jalankan Priority Order</button>
+    <button onclick="simulate('priority')">Jalankan Priority Order Preemptive</button>
+    <button onclick="simulate('prioritynp')">Jalankan Priority Order Non-Preemptive</button>
     <button class="reset-button" onclick="resetSimulator()">Reset</button>
     <div id="results"></div>
     <div id="gantt-chart" class="gantt"></div>
@@ -125,16 +126,22 @@
     <p>- Round Robin tidak secara langsung menginterupsi. Jika proses baru datang ketika proses lama sedang berjalan, proses baru harus menunggu terlebih dahulu</p>
     <p>- Jika Round Robin memiliki model Non Preemptive (tidak bisa diganggu/tidak bisa mengubah urutan) maka tidak ada bedanya dengan FCFS</p>
     <p>- Pada Round Robin, apabila ada proses baru ketika proses sebelumnya sudah mengantri, maka proses baru harus ikut mengantri dan tidak didahulukan</p>
-    
-<p>- Semakin kecil nilai prioritas, semakin tinggi kedudukannya</p>
-    <p>- Priority Order pada website ini menggunakan prinsip Preemptive, Proses dapat diganggu ketika berjalan</p>
+    <p>- Nilai prioritas dimulai dari 0. Maksimum nilai prioritas biasanya adalah 10 namun dalam pengaplikasian secara nyata, nilai maksimum prioritas relatif tergantung kebutuhan komputer</p>
+    <p>- Semakin kecil nilai prioritas, semakin tinggi kedudukannya</p>
+    <p>- Priority Order Preemptive dan Non-Preemptive tersedia pada website ini.</p>
     <p>- Jika nilai prioritas sama, maka proses yang datang lebih awal akan dieksekusi terlebih dahulu (Prinsip FCFS)</p>
+    <p>- Jika salah satu nilai prioritas tidak diisi atau berisi kosong, Priority Order tidak dapat dijalankan</p>    
     <hr>
-    <h3>Referensi : </h3>
+    <h3>Referensi dalam pembuatan website : </h3>
     <a href="https://binus.ac.id/malang/2021/11/round-robin-scheduling/">Penjadwalan Round Robin</a> - Binus Compsci<br> 
     <a href="https://www.geeksforgeeks.org/program-for-round-robin-scheduling-for-the-same-arrival-time/">Penjadwalan Round Robin #2</a> - GeeksforGeeks<br>
     <a href="https://www.codechef.com/practice/course/operating-systems/OSC06/problems/OSP33">Penjadwalan Priority Order</a> - CodeChef<br>
     <a href="https://www.scaler.com/topics/operating-system/priority-scheduling-algorithm/">Penjafwalan Priority Order #2</a> - Scaler Academy
+    <hr>
+    <p>Websie ini dibuat untuk menyelesaikan tugas dalam mata kuliah Sistem</p>
+    <p>Reza Gartiwa Faisal dan Azmi Renalji</p>
+    <p>2024 - <a href="https://github.com/KazukiFujimaru">Kazuki Fujimaru</a></p>
+
     <script>
         let processes = [];
         let processCounter = 1;
@@ -285,6 +292,12 @@
             }
             algorithmSelected = true; // Set the flag to true after selection
 
+            // Check if any process has an empty priority value
+            if (processes.some(p => p.priority === undefined || p.priority === null || p.priority === '')) {
+                alert("Salah satu data prioritas kosong. Untuk menjalankan Priority Order, semua data harus memiliki prioritas.");
+                return; // Stop execution if any priority is empty
+            }
+
             if (type === 'priority') {
                 // Clone the processes array to add a new property for tracking remaining burst time
                 processes.forEach(process => {
@@ -330,6 +343,58 @@
                             timeline.length > 0 &&
                             timeline[timeline.length - 1].processId === '-IDLE'
                         ) {
+                            timeline[timeline.length - 1].end++;
+                        } else {
+                            timeline.push({ processId: '-IDLE', start: currentTime, end: currentTime + 1 });
+                        }
+                        currentTime++;
+                    }
+                }
+
+                calculateMetrics(timeline);
+            }
+
+            if (type === 'prioritynp') {
+                // Clone the processes array to add a new property for tracking remaining burst time
+                processes.forEach(process => {
+                    process.remainingBurstTime = process.burstTime; // Track remaining burst time separately
+                });
+
+                let timeline = [];
+                let currentTime = 0;
+
+                while (processes.some(p => p.remainingBurstTime > 0)) {
+                    // Get all processes that have arrived and are not yet completed
+                    let availableProcesses = processes.filter(p => p.arrivalTime <= currentTime && p.remainingBurstTime > 0);
+
+                    if (availableProcesses.length > 0) {
+                        // Select the process with the highest priority (lower number means higher priority)
+                        let currentProcess = availableProcesses.reduce((highest, process) => {
+                            if (
+                                process.priority < highest.priority ||
+                                (process.priority === highest.priority && process.arrivalTime < highest.arrivalTime)
+                            ) {
+                                return process;
+                            }
+                            return highest;
+                        });
+
+                        // Execute the process until it completes (non-preemptive)
+                        let executionStart = currentTime;
+                        let executionEnd = currentTime + currentProcess.remainingBurstTime;
+
+                        timeline.push({
+                            processId: currentProcess.processId,
+                            start: executionStart,
+                            end: executionEnd,
+                        });
+
+                        // Update the current time and mark the process as completed
+                        currentTime = executionEnd;
+                        currentProcess.remainingBurstTime = 0;
+                    } else {
+                        // Handle idle time if no process is available
+                        if (timeline.length > 0 && timeline[timeline.length - 1].processId === '-IDLE') {
                             timeline[timeline.length - 1].end++;
                         } else {
                             timeline.push({ processId: '-IDLE', start: currentTime, end: currentTime + 1 });
